@@ -91,8 +91,12 @@
             font-weight: 600;
             transition: all 0.2s ease-in-out;
         }
-        .moving-border-btn:hover {
+        .moving-border-btn:hover:not(:disabled) {
              transform: scale(1.05);
+        }
+        .moving-border-btn:disabled {
+            cursor: not-allowed;
+            opacity: 0.7;
         }
         .moving-border-btn::before {
             content: '';
@@ -570,12 +574,13 @@
                     <div class="animate-on-scroll fade-in-up glass-card p-8 text-center">
                         <h2 class="text-2xl font-bold text-white">Ready to Unlock Your Financial Superpower?</h2>
                         <p class="mt-3 text-gray-300 max-w-xl mx-auto">Join the waitlist for exclusive early access and a special discount.</p>
-                        <form class="mt-6 max-w-md mx-auto flex flex-col sm:flex-row gap-3">
-                            <input type="email" placeholder="you@company.com" required class="flex-grow w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm">
+                        <form id="waitlist-form" class="mt-6 max-w-md mx-auto flex flex-col sm:flex-row gap-3">
+                            <input id="email-input" name="email" type="email" placeholder="you@company.com" required class="flex-grow w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm">
                             <button type="submit" class="moving-border-btn flex-shrink-0">
                                 <span>Join Waitlist</span>
                             </button>
                         </form>
+                        <div id="form-message" class="mt-4 text-sm h-5"></div>
                     </div>
                 </div>
             </section>
@@ -734,6 +739,57 @@
                     }
                 });
             }
+
+            const waitlistForm = document.getElementById('waitlist-form');
+            const formMessage = document.getElementById('form-message');
+            const scriptURL = 'https://script.google.com/macros/s/AKfycbwCDa0n68Idsy_Y1oWicpcwDNCgY-_X_tFhvXPPZ9niD7aA6jx6zVkCRkUxlzmK-2NNAQ/exec';
+
+            waitlistForm.addEventListener('submit', e => {
+                e.preventDefault();
+                
+                const submitButton = waitlistForm.querySelector('button[type="submit"]');
+                const emailInput = document.getElementById('email-input');
+                const originalButtonHTML = submitButton.innerHTML;
+
+                submitButton.disabled = true;
+                submitButton.innerHTML = `<span>Submitting...</span>`;
+                formMessage.textContent = '';
+
+                const email = emailInput.value;
+
+                fetch(scriptURL, { 
+                    method: 'POST', 
+                    mode: 'cors', // Required for cross-origin requests
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ email: email })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.result === 'success') {
+                        formMessage.textContent = "Success! You've joined the waitlist.";
+                        formMessage.style.color = '#4ade80'; // Green color
+                        waitlistForm.reset();
+                    } else {
+                        throw new Error(data.message || 'An unknown error occurred.');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error!', error.message);
+                    formMessage.textContent = 'Error! Please try again later.';
+                    formMessage.style.color = '#f87171'; // Red color
+                })
+                .finally(() => {
+                    // Re-enable the button and restore its original content
+                    submitButton.disabled = false;
+                    submitButton.innerHTML = originalButtonHTML;
+                    // Clear the message after a few seconds
+                    setTimeout(() => {
+                        formMessage.textContent = '';
+                    }, 5000);
+                });
+            });
         });
     </script>
 </body>
